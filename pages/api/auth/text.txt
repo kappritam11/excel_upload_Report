@@ -1,0 +1,36 @@
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { createClient } from "@supabase/supabase-js";
+
+
+export default NextAuth({
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "user" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        // Simple hardcoded check — replace with your DB logic
+        if (credentials.username === "user" && credentials.password === "pass") {
+          return { id: 1, name: "User", username: "user" };
+        }
+        return null;
+      },
+    }),
+  ],
+
+  // Configure session behavior
+  session: {
+    strategy: "jwt",
+  },
+
+  jwt: {
+    secret: process.env.JWT_SECRET || "your-secret-key",
+  },
+
+  pages: {
+    signIn: "/", // Use custom login page
+  },
+});

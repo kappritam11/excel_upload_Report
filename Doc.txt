@@ -1,0 +1,5 @@
+npm install papaparse
+npm install next-auth
+TypeScript
+
+next js code evolution
