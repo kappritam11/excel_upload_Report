@@ -55,7 +55,7 @@ export default function UploadCSV({ user }: UploadCSVProps) {
       } else if (data && data.length > 0) {
         // Assuming report_name is a JSON string representing an array of options
         try {
-          const parsedArray = JSON.parse(data[0].report_name) as Option[];
+          const parsedArray: Option[] = data.flatMap(row => row.report_name as Option[])
           setOptions(parsedArray);
           if (parsedArray.length > 0) {
             setSelected(parsedArray[0].value);
