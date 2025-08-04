@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import '../styles/Backend.css';
 import Papa from 'papaparse';
+import Menu from '../components/Menu';
+
 
 interface UploadCSVProps {
-  user: any; // You can replace `any` with a proper user type if available
+  user: any; 
 }
 
 interface Option {
@@ -16,7 +18,13 @@ interface Option {
   id?: string | number;
 }
 
-type TableType = 'Price' | 'Dealer' | '';
+type Props = {
+  supabase: SupabaseClient;
+  tableToDelete: string;
+  dataToInsert: any[]; // your data array, 5000+ records
+  rpcName?: string;
+};
+
 
 export default function UploadCSV({ user }: UploadCSVProps) {
   const [dataf, setDataf] = useState<Record<string, string | number | null>[]>([]);
@@ -29,6 +37,7 @@ export default function UploadCSV({ user }: UploadCSVProps) {
   const [showButton, setShowButton] = useState<boolean>(false);
   const [options, setOptions] = useState<Option[]>([]);
   const [selected, setSelected] = useState<string>('');
+  const [progress, setProgress] = useState<number>(0);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -42,8 +51,6 @@ export default function UploadCSV({ user }: UploadCSVProps) {
     },
   });
 
-
-
   useEffect(() => {
     const fetchOptions = async () => {
       const { data, error } = await supabase.from('tbl_user_login').select('excel_upload');
@@ -56,10 +63,9 @@ export default function UploadCSV({ user }: UploadCSVProps) {
          
           setOptions(parsedArray);
           if (parsedArray.length > 0) {
-         
+            setSelected(parsedArray[0].value as string)
             setTable(parsedArray[0].value as string);
-            setTable1(parsedArray[0].table1 as string)
-            setError(table1);
+            setTable1(parsedArray[0].table1 as string);
           }
         } catch (err) {
       
@@ -92,8 +98,7 @@ export default function UploadCSV({ user }: UploadCSVProps) {
 
         const keysA1 = Object.keys(parsed[0]);
         let keysA2: string[] = [];
-
-
+    
         const { data, error } = await supabase.from(table).select('*').limit(1);;
       if (error) {
         console.error('Error fetching options:', error);
@@ -114,7 +119,8 @@ export default function UploadCSV({ user }: UploadCSVProps) {
 
         if (missingInA1.length === 0) {
           setError('');
-          setSuccess('All keys match!');
+          //setSuccess('All keys match!');
+          setSuccess(table1);
           setShowButton(true);
         } else {
           setSuccess('');
@@ -133,31 +139,42 @@ export default function UploadCSV({ user }: UploadCSVProps) {
     setLoading(true);
     setMessage('');
 
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        await supabase.from(table).delete().not('id', 'is', null);
 
-    switch (table) {
-      case 'Price':
-        await supabase.from('tbl_product_master_Excel_Uplode').delete().not('id', 'is', null);
-        await supabase.from('tbl_product_master_Excel_Uplode').insert(dataf);
-        await supabase.rpc('fn_updatet_tbl_product_master_excel_uplode');
-        break;
+        setProgress(0);
+        const batchSize = 5000;
+        var countofsend=0;
 
-      case 'Dealer':
-        await supabase.from('tbl_dealer_master_excel_uplode').delete().not('id', 'is', null);
-        await supabase.from('tbl_dealer_master_excel_uplode').insert(dataf);
-        await supabase.rpc('fn_updatet_tbl_dealer_master_excel_uplode');
-        break;
-    }
+        for (let i = 0; i < dataf.length; i += batchSize) {
+          const batch = dataf.slice(i, i + batchSize);
+          await supabase.from(table).insert(batch);
+          countofsend=countofsend+1;
+           setProgress((100*countofsend)/ Math.ceil(dataf.length / batchSize));
+        }
+      
+       
 
+        if(table1!='')
+        {
+          await supabase.rpc(table1);
+        }
+        
+    setProgress(100);
     setShowButton(false);
     alert('Insert successful!');
     setLoading(false);
   };
 
+  
+
   return (
     <div style={{ padding: '2rem' }}>
-      <button onClick={() => signOut()}>Sign Out</button>
+       <Menu/>
+     
       <h1>Upload CSV File</h1>
+
+      
 
       {options.map((opt) => (
         <label
@@ -170,9 +187,12 @@ export default function UploadCSV({ user }: UploadCSVProps) {
             value={opt.value}
             checked={selected === opt.value}
             onChange={() => {
-              const val = opt.value as TableType;
+              const val = opt.value as string;
+              const val1 = opt.table1 as string;
+              
               setSelected(val);
               setTable(val);
+              setTable1(val1);
             }}
           />
           {opt.label}
@@ -204,7 +224,14 @@ export default function UploadCSV({ user }: UploadCSVProps) {
 
       {loading && (
         <div style={overlayStyle}>
-          <div style={loaderStyle}>Loading... Please wait</div>
+          <div style={loaderStyle}>Loading... Please wait
+          <p>{Math.round(progress)}% complete</p>
+          <progress
+            value={progress}
+            max={100}
+            style={{ width: '100%', height: 24 }}
+          ></progress>
+          </div>
         </div>
       )}
     </div>

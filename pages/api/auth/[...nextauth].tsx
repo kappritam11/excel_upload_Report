@@ -52,16 +52,16 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 5, // 5 seconds (you likely want a longer duration in real apps)
+    maxAge: 10*60, 
   },
 
   jwt: {
     secret: jwtSecret,
-    maxAge: 5,
+    maxAge: 10*60,
   },
 
   pages: {
-    signIn: "/", // Custom login page
+    signIn: "/login", // Custom login page
   },
 };
 

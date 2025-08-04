@@ -4,6 +4,9 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import "../styles/Backend.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Menu from '../components/Menu';
+import { GetServerSidePropsContext, GetServerSidePropsResult } from 'next';
+
 
 interface Option {
   id?: string | number;
@@ -16,11 +19,7 @@ interface DataRow {
 }
 
 interface UploadCSVProps {
-  user?: {
-    name?: string;
-    email?: string;
-    // add more user fields if needed
-  };
+   user: any; 
 }
 
 export default function UploadCSV({ user }: UploadCSVProps) {
@@ -118,7 +117,9 @@ export default function UploadCSV({ user }: UploadCSVProps) {
   };
 
   return (
+    
     <div style={{ textAlign: "center" }}>
+      <Menu/>
       {options.map((opt) => (
         <label key={opt.id ?? opt.value} className={`radio-label ${selected === opt.value ? "selected" : ""}`}>
           <input
@@ -182,6 +183,25 @@ export default function UploadCSV({ user }: UploadCSVProps) {
       )}
     </div>
   );
+}
+
+// Server-side authentication
+export async function getServerSideProps(
+  context: GetServerSidePropsContext
+): Promise<GetServerSidePropsResult<UploadCSVProps>> {
+  const session = await getSession(context);
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: { user: session.user },
+  };
 }
 
 const overlayStyle: React.CSSProperties = {
